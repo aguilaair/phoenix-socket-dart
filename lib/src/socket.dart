@@ -372,13 +372,11 @@ class PhoenixSocket {
       String endpoint, PhoenixSocketOptions options) async {
     var decodedUri = Uri.parse(endpoint);
     final params = await options.getParams();
-    if (params != null) {
-      final queryParams = decodedUri.queryParameters.entries.toList()
-        ..addAll(params.entries.toList());
+    final queryParams = decodedUri.queryParameters.entries.toList()
+      ..addAll(params.entries.toList());
 
-      decodedUri =
-          decodedUri.replace(queryParameters: Map.fromEntries(queryParams));
-    }
+    decodedUri =
+        decodedUri.replace(queryParameters: Map.fromEntries(queryParams));
     return decodedUri;
   }
 
