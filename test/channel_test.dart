@@ -12,7 +12,7 @@ void main() {
       final completer = Completer<Null>();
 
       await socket.connect();
-      socket.addChannel(topic: 'channel1').join().onReply('ok', (reply) {
+      socket.addChannel(topic: 'channel1').join()!.onReply('ok', (reply) {
         expect(reply.status, equals('ok'));
         completer.complete();
       });
@@ -28,7 +28,7 @@ void main() {
       final channel1 = socket.addChannel(
           topic: 'channel1:hello', parameters: {'password': 'deadbeef'});
 
-      expect(channel1.join().future, completes);
+      expect(channel1.join()!.future, completes);
     });
 
     test('can handle channel join failures', () async {
@@ -40,7 +40,7 @@ void main() {
       final channel1 = socket.addChannel(
           topic: 'channel1:hello', parameters: {'password': 'deadbee?'});
 
-      channel1.join().onReply('error', (error) {
+      channel1.join()!.onReply('error', (error) {
         expect(error.status, equals('error'));
         completer.complete();
       });
@@ -57,7 +57,7 @@ void main() {
       final channel1 = socket
           .addChannel(topic: 'channel1:hello', parameters: {'crash!': '11'});
 
-      channel1.join().onReply('error', (error) {
+      channel1.join()!.onReply('error', (error) {
         expect(error.status, equals('error'));
         expect(error.response, equals({'reason': 'join crashed'}));
         completer.complete();
@@ -72,7 +72,7 @@ void main() {
       await socket.connect();
 
       final channel1 = socket.addChannel(topic: 'channel1');
-      await channel1.join().future;
+      await channel1.join()!.future;
 
       final reply = await channel1.push('hello!', {'foo': 'bar'}).future;
       expect(reply.status, equals('ok'));
@@ -85,7 +85,7 @@ void main() {
       await socket.connect();
 
       final channel2 = socket.addChannel(topic: 'channel2');
-      await channel2.join().future;
+      await channel2.join()!.future;
 
       var count = 0;
       await for (final msg in channel2.messages) {
@@ -99,26 +99,26 @@ void main() {
       final socket1 = PhoenixSocket(addr);
       await socket1.connect();
       final channel1 = socket1.addChannel(topic: 'channel3');
-      await channel1.join().future;
+      await channel1.join()!.future;
 
       final socket2 = PhoenixSocket(addr);
       await socket2.connect();
       final channel2 = socket2.addChannel(topic: 'channel3');
-      await channel2.join().future;
+      await channel2.join()!.future;
 
       expect(
         channel1.messages,
         emitsInOrder([
           predicate(
-            (msg) => msg.payload['from'] == 'socket1',
+            (dynamic msg) => msg.payload['from'] == 'socket1',
             'was from socket1',
           ),
           predicate(
-            (msg) => msg.payload['from'] == 'socket2',
+            (dynamic msg) => msg.payload['from'] == 'socket2',
             'was from socket2',
           ),
           predicate(
-            (msg) => msg.payload['from'] == 'socket2',
+            (dynamic msg) => msg.payload['from'] == 'socket2',
             'was from socket2',
           ),
         ]),
@@ -128,15 +128,15 @@ void main() {
         channel2.messages,
         emitsInOrder([
           predicate(
-            (msg) => msg.payload['from'] == 'socket1',
+            (dynamic msg) => msg.payload['from'] == 'socket1',
             'was from socket1',
           ),
           predicate(
-            (msg) => msg.payload['from'] == 'socket2',
+            (dynamic msg) => msg.payload['from'] == 'socket2',
             'was from socket2',
           ),
           predicate(
-            (msg) => msg.payload['from'] == 'socket2',
+            (dynamic msg) => msg.payload['from'] == 'socket2',
             'was from socket2',
           ),
         ]),
@@ -152,12 +152,12 @@ void main() {
       final socket1 = PhoenixSocket(addr);
       await socket1.connect();
       final channel1 = socket1.addChannel(topic: 'channel3');
-      await channel1.join().future;
+      await channel1.join()!.future;
 
       final socket2 = PhoenixSocket(addr);
       await socket2.connect();
       final channel2 = socket2.addChannel(topic: 'channel3');
-      await channel2.join().future;
+      await channel2.join()!.future;
 
       channel1.push('ping', {'from': 'socket1'});
 
@@ -165,7 +165,7 @@ void main() {
         channel2.messages,
         emits(
           predicate(
-            (msg) => msg.payload['from'] == 'socket1',
+            (dynamic msg) => msg.payload['from'] == 'socket1',
             'was from socket1',
           ),
         ),
@@ -181,12 +181,12 @@ void main() {
       final socket1 = PhoenixSocket(addr);
       await socket1.connect();
       final channel1 = socket1.addChannel(topic: 'channel3');
-      await channel1.join().future;
+      await channel1.join()!.future;
 
       final socket2 = PhoenixSocket(addr);
       await socket2.connect();
       final channel2 = socket2.addChannel(topic: 'channel3');
-      await channel2.join().future;
+      await channel2.join()!.future;
 
       channel1.push('ping', {'from': 'socket1'});
 
@@ -194,7 +194,7 @@ void main() {
         channel2.messages,
         emits(
           predicate(
-            (msg) => msg.payload['from'] == 'socket1',
+            (dynamic msg) => msg.payload['from'] == 'socket1',
             'was from socket1',
           ),
         ),
@@ -206,7 +206,7 @@ void main() {
       expect(socket1.channels.length, equals(0));
 
       final channel3 = socket1.addChannel(topic: 'channel3');
-      await channel3.join().future;
+      await channel3.join()!.future;
 
       channel3.push('ping', {'from': 'socket1'});
 
@@ -214,7 +214,7 @@ void main() {
         channel2.messages,
         emits(
           predicate(
-            (msg) => msg.payload['from'] == 'socket1',
+            (dynamic msg) => msg.payload['from'] == 'socket1',
             'was from socket1',
           ),
         ),

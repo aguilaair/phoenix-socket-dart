@@ -18,10 +18,10 @@ class PhoenixSocketCloseEvent extends PhoenixSocketEvent {
   });
 
   /// The reason the socket was closed.
-  final String reason;
+  final String? reason;
 
   /// The code of the socket close.
-  final int code;
+  final int? code;
 }
 
 /// Error event for a [PhoenixSocket].
@@ -44,7 +44,7 @@ class PhoenixChannelEvent extends Equatable {
   PhoenixChannelEvent._(this.value);
 
   /// A reply event name for a given push ref value.
-  factory PhoenixChannelEvent.replyFor(String ref) =>
+  factory PhoenixChannelEvent.replyFor(String? ref) =>
       PhoenixChannelEvent._('${__chanReplyEventName}_$ref');
 
   /// A custom push event.
@@ -99,7 +99,7 @@ class PhoenixChannelEvent extends Equatable {
   /// The constant heartbeat event
   static PhoenixChannelEvent heartbeat = PhoenixChannelEvent._('heartbeat');
 
-  static Set<PhoenixChannelEvent> _statuses;
+  static Set<PhoenixChannelEvent>? _statuses;
 
   /// The constant set of possible internal channel event names.
   static Set<PhoenixChannelEvent> get statuses =>

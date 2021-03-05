@@ -50,7 +50,7 @@ class PhoenixSocket {
 
     /// The options used when initiating and maintaining the
     /// websocket connection.
-    PhoenixSocketOptions socketOptions,
+    PhoenixSocketOptions? socketOptions,
   }) : _endpoint = endpoint {
     _options = socketOptions ?? PhoenixSocketOptions();
 
@@ -72,14 +72,14 @@ class PhoenixSocket {
         .cast<PhoenixSocketErrorEvent>();
 
     _subscriptions = [
-      _messageStream.listen(_onMessage),
-      _openStream.listen((_) => _startHeartbeat()),
-      _closeStream.listen((_) => _cancelHeartbeat())
+      _messageStream!.listen(_onMessage),
+      _openStream!.listen((_) => _startHeartbeat()),
+      _closeStream!.listen((_) => _cancelHeartbeat())
     ];
   }
 
-  final Map<String, Completer<Message>> _pendingMessages = {};
-  final Map<String, Stream<Message>> _topicStreams = {};
+  final Map<String?, Completer<Message>> _pendingMessages = {};
+  final Map<String?, Stream<Message>> _topicStreams = {};
 
   final BehaviorSubject<PhoenixSocketEvent> _stateStreamController =
       BehaviorSubject();
@@ -88,40 +88,40 @@ class PhoenixSocket {
   final String _endpoint;
   final StreamController<Message> _topicMessages = StreamController();
 
-  Uri _mountPoint;
-  SocketState _socketState;
+  Uri? _mountPoint;
+  SocketState? _socketState;
 
-  WebSocketChannel _ws;
+  WebSocketChannel? _ws;
 
-  Stream<PhoenixSocketOpenEvent> _openStream;
-  Stream<PhoenixSocketCloseEvent> _closeStream;
-  Stream<PhoenixSocketErrorEvent> _errorStream;
-  Stream<Message> _messageStream;
-  _StreamRouter<Message> _router;
+  Stream<PhoenixSocketOpenEvent>? _openStream;
+  Stream<PhoenixSocketCloseEvent>? _closeStream;
+  Stream<PhoenixSocketErrorEvent>? _errorStream;
+  Stream<Message>? _messageStream;
+  _StreamRouter<Message>? _router;
 
   /// Stream of [PhoenixSocketOpenEvent] being produced whenever
   /// the connection is open.
-  Stream<PhoenixSocketOpenEvent> get openStream => _openStream;
+  Stream<PhoenixSocketOpenEvent>? get openStream => _openStream;
 
   /// Stream of [PhoenixSocketCloseEvent] being produced whenever
   /// the connection closes.
-  Stream<PhoenixSocketCloseEvent> get closeStream => _closeStream;
+  Stream<PhoenixSocketCloseEvent>? get closeStream => _closeStream;
 
   /// Stream of [PhoenixSocketErrorEvent] being produced in
   /// the lifetime of the [PhoenixSocket].
-  Stream<PhoenixSocketErrorEvent> get errorStream => _errorStream;
+  Stream<PhoenixSocketErrorEvent>? get errorStream => _errorStream;
 
   /// Stream of all [Message] instances received.
-  Stream<Message> get messageStream => _messageStream;
+  Stream<Message>? get messageStream => _messageStream;
 
   /// Reconnection durations, increasing in length.
-  List<Duration> _reconnects;
+  late List<Duration> _reconnects;
 
   List<StreamSubscription> _subscriptions = [];
 
   int _ref = 0;
-  String _nextHeartbeatRef;
-  Timer _heartbeatTimeout;
+  String? _nextHeartbeatRef;
+  Timer? _heartbeatTimeout;
 
   /// A property yielding unique message reference ids,
   /// monotonically increasing.
@@ -134,9 +134,9 @@ class PhoenixSocket {
 
   /// [Map] of topic names to [PhoenixChannel] instances being
   /// maintained and tracked by the socket.
-  Map<String, PhoenixChannel> channels = {};
+  Map<String?, PhoenixChannel> channels = {};
 
-  PhoenixSocketOptions _options;
+  late PhoenixSocketOptions _options;
 
   /// Default duration for a connection timeout.
   Duration get defaultTimeout => _options.timeout;
@@ -151,7 +151,7 @@ class PhoenixSocket {
   /// The [PhoenixChannel] for this topic may not be open yet, it'll still
   /// eventually yield messages when the channel is open and it receives
   /// messages.
-  Stream<Message> streamForTopic(String topic) => _topicStreams.putIfAbsent(
+  Stream<Message> streamForTopic(String? topic) => _topicStreams.putIfAbsent(
       topic, () => _streamRouter.route((event) => event.topic == topic));
 
   /// The string URL of the remote Phoenix server.
@@ -159,7 +159,7 @@ class PhoenixSocket {
 
   /// The [Uri] containing all the parameters and options for the
   /// remote connection to occue.
-  Uri get mountPoint => _mountPoint;
+  Uri? get mountPoint => _mountPoint;
 
   /// Whether the underlying socket is connected of not.
   bool get isConnected =>
@@ -169,7 +169,7 @@ class PhoenixSocket {
   ///
   /// If the attempt fails, retries will be triggered at intervals specified
   /// by retryAfterIntervalMS
-  Future<PhoenixSocket> connect() async {
+  Future<PhoenixSocket?> connect() async {
     if (_ws != null) {
       _logger.warning(
           'Calling connect() on already connected or connecting socket.');
@@ -185,11 +185,11 @@ class PhoenixSocket {
     _mountPoint = await _buildMountPoint(_endpoint, _options);
     _logger.finest(() => 'Attempting to connect to $_mountPoint');
 
-    final completer = Completer<PhoenixSocket>();
+    final completer = Completer<PhoenixSocket?>();
 
     try {
-      _ws = WebSocketChannel.connect(_mountPoint);
-      _ws.stream
+      _ws = WebSocketChannel.connect(_mountPoint!);
+      _ws!.stream
           .where(_shouldPipeMessage)
           .listen(_onSocketData, cancelOnError: true)
             ..onError(_onSocketError)
@@ -234,14 +234,14 @@ class PhoenixSocket {
 
   /// Close the underlying connection supporting the socket.
   void close([
-    int code,
-    String reason,
+    int? code,
+    String? reason,
     reconnect = false,
   ]) {
     _shouldReconnect = reconnect;
     if (isConnected) {
       _socketState = SocketState.closing;
-      _ws.sink.close(code, reason);
+      _ws!.sink.close(code, reason);
     } else if (!_shouldReconnect) {
       dispose();
     }
@@ -256,7 +256,7 @@ class PhoenixSocket {
     if (_disposed) return;
 
     _disposed = true;
-    _ws?.sink?.close();
+    _ws?.sink.close();
 
     for (final sub in _subscriptions) {
       sub.cancel();
@@ -287,7 +287,7 @@ class PhoenixSocket {
   /// use wait the returned [Push.future].
   Future<Message> waitForMessage(Message message) {
     if (_pendingMessages.containsKey(message.ref)) {
-      return _pendingMessages[message.ref].future;
+      return _pendingMessages[message.ref]!.future;
     }
     return Future.error(
       ArgumentError(
@@ -307,19 +307,19 @@ class PhoenixSocket {
         socketClosed: PhoenixSocketCloseEvent(),
       ));
     }
-    _ws.sink.add(_options.serializer.encode(message));
+    _ws!.sink.add(_options.serializer.encode(message));
     _pendingMessages[message.ref] = Completer<Message>();
-    return _pendingMessages[message.ref].future;
+    return _pendingMessages[message.ref]!.future;
   }
 
   /// [topic] is the name of the channel you wish to join
   /// [parameters] are any options parameters you wish to send
   PhoenixChannel addChannel({
-    @required String topic,
-    Map<String, dynamic> parameters,
-    Duration timeout,
+    required String topic,
+    Map<String, dynamic>? parameters,
+    Duration? timeout,
   }) {
-    PhoenixChannel channel;
+    PhoenixChannel? channel;
     if (channels.isNotEmpty) {
       final foundChannels =
           channels.entries.where((element) => element.value.topic == topic);
@@ -335,9 +335,9 @@ class PhoenixSocket {
       );
 
       channels[channel.reference] = channel;
-      _logger.finer(() => 'Adding channel ${channel.topic}');
+      _logger.finer(() => 'Adding channel ${channel!.topic}');
     } else {
-      _logger.finer(() => 'Reusing existing channel ${channel.topic}');
+      _logger.finer(() => 'Reusing existing channel ${channel!.topic}');
     }
     return channel;
   }
@@ -395,11 +395,11 @@ class PhoenixSocket {
     _heartbeatTimeout = null;
   }
 
-  Future<bool> _sendHeartbeat(Timer timer) async {
+  Future<bool> _sendHeartbeat(Timer? timer) async {
     if (!isConnected) return false;
     if (_nextHeartbeatRef != null) {
       _nextHeartbeatRef = null;
-      unawaited(_ws.sink.close(normalClosure, 'heartbeat timeout'));
+      unawaited(_ws!.sink.close(normalClosure, 'heartbeat timeout'));
       return false;
     }
     try {
@@ -449,12 +449,12 @@ class PhoenixSocket {
     }
 
     if (_pendingMessages.containsKey(message.ref)) {
-      final completer = _pendingMessages[message.ref];
+      final completer = _pendingMessages[message.ref]!;
       _pendingMessages.remove(message.ref);
       completer.complete(message);
     }
 
-    if (message.topic != null && message.topic.isNotEmpty) {
+    if (message.topic != null && message.topic!.isNotEmpty) {
       _topicMessages.add(message);
     }
   }
@@ -463,7 +463,7 @@ class PhoenixSocket {
     if (message is String) {
       if (_receiveStreamController is StreamController &&
           !_receiveStreamController.isClosed) {
-        _receiveStreamController?.add(message);
+        _receiveStreamController.add(message);
       }
     } else {
       throw ArgumentError('Received a non-string');
@@ -482,7 +482,7 @@ class PhoenixSocket {
 
     if (_stateStreamController is StreamController &&
         !_stateStreamController.isClosed) {
-      _stateStreamController?.add(socketError);
+      _stateStreamController.add(socketError);
     }
 
     for (final completer in _pendingMessages.values) {
@@ -514,7 +514,7 @@ class PhoenixSocket {
 
     if (_stateStreamController is StreamController &&
         !_stateStreamController.isClosed) {
-      _stateStreamController?.add(ev);
+      _stateStreamController.add(ev);
     }
 
     if (_socketState == SocketState.closing) {
@@ -536,7 +536,7 @@ class PhoenixSocket {
     _pendingMessages.clear();
   }
 
-  Future<PhoenixSocket> _delayedReconnect([Duration delay]) async {
+  Future<PhoenixSocket?> _delayedReconnect([Duration? delay]) async {
     if (_reconnecting) return null;
 
     _reconnecting = true;

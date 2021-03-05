@@ -35,7 +35,7 @@ void main() {
 
       unawaited(socket.connect());
 
-      await for (final event in socket.openStream) {
+      await for (final event in socket.openStream!) {
         expect(event, isA<PhoenixSocketOpenEvent>());
         socket.close();
         break;
@@ -55,7 +55,7 @@ void main() {
         Timer(const Duration(milliseconds: 100), socket.close);
       });
 
-      socket.closeStream.listen((event) {
+      socket.closeStream!.listen((event) {
         expect(event, isA<PhoenixSocketCloseEvent>());
         completer.complete();
       });
@@ -74,7 +74,7 @@ void main() {
       await socket.connect();
 
       var i = 0;
-      socket.openStream.listen((event) async {
+      socket.openStream!.listen((event) async {
         if (i++ < 3) {
           await Future.delayed(const Duration(milliseconds: 50));
           socket.close(null, null, true);

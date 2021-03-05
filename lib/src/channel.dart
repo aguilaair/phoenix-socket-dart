@@ -45,7 +45,7 @@ class PhoenixChannel {
     this.socket, {
     this.topic,
     this.parameters = const {},
-    Duration timeout,
+    Duration? timeout,
   })  : _controller = StreamController.broadcast(),
         _waiters = {},
         _timeout = timeout ?? socket.defaultTimeout {
@@ -57,34 +57,34 @@ class PhoenixChannel {
   }
 
   /// Parameters passed to the backend at join time.
-  final Map<String, dynamic> parameters;
+  final Map<String, dynamic>? parameters;
 
   /// The [PhoenixSocket] through which this channel is established.
   final PhoenixSocket socket;
 
-  final StreamController<Message> _controller;
+  final StreamController<Message?> _controller;
   final Map<PhoenixChannelEvent, Completer<Message>> _waiters;
   final List<StreamSubscription> _subscriptions = [];
 
   /// The name of the topic to which this channel will bind.
-  final String topic;
+  final String? topic;
 
   Duration _timeout;
   PhoenixChannelState _state = PhoenixChannelState.closed;
-  Timer _rejoinTimer;
+  Timer? _rejoinTimer;
   bool _joinedOnce = false;
-  String _reference;
-  Push _joinPush;
-  Logger _logger;
+  String? _reference;
+  Push? _joinPush;
+  late Logger _logger;
 
   /// A list of push to be sent out once the channel is joined.
   final List<Push> pushBuffer = [];
 
   /// Stream of all messages coming through this channel from the backend.
-  Stream<Message> get messages => _controller.stream;
+  Stream<Message?> get messages => _controller.stream;
 
   /// Unique identifier of the 'join' push message.
-  String get joinRef => _joinPush.ref;
+  String get joinRef => _joinPush!.ref;
 
   /// State of the channel.
   PhoenixChannelState get state => _state;
@@ -93,17 +93,17 @@ class PhoenixChannel {
   bool get canPush =>
       socket.isConnected && _state == PhoenixChannelState.joined;
 
-  String _loggerName;
+  String? _loggerName;
 
   /// The name of the logger associated to this channel.
-  String get loggerName => _loggerName ??= topic.replaceAll(
+  String get loggerName => _loggerName ??= topic!.replaceAll(
       RegExp(
         '[:,*&?!@#\$%]',
       ),
       '_');
 
   /// This channel's unique numeric reference.
-  String get reference {
+  String? get reference {
     _reference ??= socket.nextRef;
     return _reference;
   }
@@ -151,7 +151,7 @@ class PhoenixChannel {
   }
 
   /// Trigger the reception of a message.
-  void trigger(Message message) {
+  void trigger(Message? message) {
     if (!_controller.isClosed) {
       _controller.add(message);
     }
@@ -170,7 +170,7 @@ class PhoenixChannel {
       final prevState = _state;
       _state = PhoenixChannelState.errored;
       if (prevState == PhoenixChannelState.joining) {
-        _joinPush.reset();
+        _joinPush!.reset();
       }
       if (socket.isConnected) {
         _startRejoinTimer();
@@ -179,7 +179,7 @@ class PhoenixChannel {
   }
 
   /// Leave this channel.
-  Push leave({Duration timeout}) {
+  Push leave({Duration? timeout}) {
     _joinPush?.cancelTimeout();
     _rejoinTimer?.cancel();
 
@@ -210,7 +210,7 @@ class PhoenixChannel {
   }
 
   /// Join this channel using the associated [PhoenixSocket].
-  Push join([Duration newTimeout]) {
+  Push? join([Duration? newTimeout]) {
     assert(!_joinedOnce);
     if (newTimeout is Duration) {
       _timeout = newTimeout;
@@ -238,7 +238,7 @@ class PhoenixChannel {
     /// Manually set timeout value for this push.
     ///
     /// If not provided, the default timeout will be used.
-    Duration newTimeout,
+    Duration? newTimeout,
   ]) =>
       pushEvent(
         PhoenixChannelEvent.custom(eventName),
@@ -253,7 +253,7 @@ class PhoenixChannel {
   Push pushEvent(
     PhoenixChannelEvent event,
     Map<String, dynamic> payload, [
-    Duration newTimeout,
+    Duration? newTimeout,
   ]) {
     assert(_joinedOnce);
 
@@ -276,10 +276,10 @@ class PhoenixChannel {
   List<StreamSubscription> _subscribeToSocketStreams(PhoenixSocket socket) {
     return [
       socket.streamForTopic(topic).where(_isMember).listen(_controller.add),
-      socket.errorStream.listen(
+      socket.errorStream!.listen(
         (error) => _rejoinTimer?.cancel(),
       ),
-      socket.openStream.listen(
+      socket.openStream!.listen(
         (event) {
           _rejoinTimer?.cancel();
           if (_state == PhoenixChannelState.errored) {
@@ -290,7 +290,7 @@ class PhoenixChannel {
     ];
   }
 
-  Push _prepareJoin([Duration providedTimeout]) {
+  Push _prepareJoin([Duration? providedTimeout]) {
     final push = Push(
       this,
       event: PhoenixChannelEvent.join,
@@ -331,7 +331,7 @@ class PhoenixChannel {
         ).send();
 
         _state = PhoenixChannelState.errored;
-        _joinPush.reset();
+        _joinPush!.reset();
         if (socket.isConnected) {
           _startRejoinTimer();
         }
@@ -348,29 +348,29 @@ class PhoenixChannel {
   void _attemptJoin() {
     if (_state != PhoenixChannelState.leaving) {
       _state = PhoenixChannelState.joining;
-      _bindJoinPush(_joinPush);
-      unawaited(_joinPush.resend(_timeout));
+      _bindJoinPush(_joinPush!);
+      unawaited(_joinPush!.resend(_timeout));
     }
   }
 
   bool _isMember(Message message) {
     if (message.joinRef != null &&
-        message.joinRef != _joinPush.ref &&
+        message.joinRef != _joinPush!.ref &&
         PhoenixChannelEvent.statuses.contains(message.event)) {
       return false;
     }
     return true;
   }
 
-  void _onMessage(Message message) {
-    if (message.event == PhoenixChannelEvent.close) {
+  void _onMessage(Message? message) {
+    if (message!.event == PhoenixChannelEvent.close) {
       _logger.finer('Closing channel $topic');
       _rejoinTimer?.cancel();
       close();
     } else if (message.event == PhoenixChannelEvent.error) {
       _logger.finer('Erroring channel $topic');
       if (_state == PhoenixChannelState.joining) {
-        _joinPush.reset();
+        _joinPush!.reset();
       }
       _state = PhoenixChannelState.errored;
       if (socket.isConnected) {
@@ -385,7 +385,7 @@ class PhoenixChannel {
       _logger.finer(
         () => 'Notifying waiter for ${message.event}',
       );
-      _waiters[message.event].complete(message);
+      _waiters[message.event]!.complete(message);
     } else {
       _logger.finer(() => 'No waiter to notify for ${message.event}');
     }

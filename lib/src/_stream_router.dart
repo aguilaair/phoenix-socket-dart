@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import 'package:collection/collection.dart' show IterableExtension;
 part of 'socket.dart';
 
 /// Splits a [Stream] of events into multiple Streams based on a set of
@@ -35,7 +36,7 @@ class _StreamRouter<T> {
   }
 
   final Stream<T> _incoming;
-  StreamSubscription<T> _subscription;
+  late StreamSubscription<T> _subscription;
 
   final List<_Route<T>> _routes = <_Route<T>>[];
   final StreamController<T> _defaultController =
@@ -44,12 +45,12 @@ class _StreamRouter<T> {
   /// Events that match [predicate] are sent to the stream created by this
   /// method, and not sent to any other router streams.
   Stream<T> route(_Predicate<T> predicate) {
-    _Route route;
+    _Route? route;
     final controller = StreamController<T>.broadcast(onCancel: () {
       _routes.remove(route);
     });
     route = _Route<T>(predicate, controller);
-    _routes.add(route);
+    _routes.add(route as _Route<T>);
     return controller.stream;
   }
 
@@ -63,7 +64,7 @@ class _StreamRouter<T> {
 
   void _handle(T event) {
     final route =
-        _routes.firstWhere((r) => r.predicate(event), orElse: () => null);
+        _routes.firstWhereOrNull((r) => r.predicate(event));
     ((route != null) ? route.controller : _defaultController).add(event);
   }
 }
