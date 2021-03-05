@@ -3,7 +3,6 @@ import 'dart:core';
 import 'dart:math';
 
 import 'package:logging/logging.dart';
-import 'package:meta/meta.dart';
 import 'package:pedantic/pedantic.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:web_socket_channel/status.dart';

@@ -64,8 +64,8 @@ class _StreamRouter<T> {
 
   void _handle(T event) {
     final route =
-        _routes.firstWhereOrNull((r) => r.predicate(event));
-    ((route != null) ? route.controller : _defaultController).add(event);
+        _routes.firstWhere((r) => r.predicate(event));
+    route.controller.add(event);
   }
 }
 
